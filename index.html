@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🖖 LCARS PowerShell Databáze — Vice Admiral Jiřík</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
+
+  :root {
+    --gold: #f0c040;
+    --blue: #4fc3f7;
+    --red: #ef5350;
+    --green: #00e676;
+    --orange: #ff9800;
+    --purple: #ce93d8;
+    --bg: #010d1a;
+    --panel: #031524;
+    --border: #0d3a6e;
+    --text: #b3e5fc;
+    --text-dim: rgba(179,229,252,0.45);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 15% 40%, rgba(13,58,110,0.2) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 15%, rgba(21,101,192,0.12) 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 90%, rgba(13,58,110,0.1) 0%, transparent 50%);
+  }
+
+  body::before {
+    content:''; position:fixed; inset:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.02) 3px, rgba(0,0,0,0.02) 4px);
+    pointer-events:none; z-index:9999;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #020f1e 0%, #04192d 100%);
+    border-bottom: 3px solid var(--gold);
+    position: relative; overflow: hidden;
+  }
+  .header::after {
+    content:''; position:absolute; top:0; left:0; right:0; bottom:0;
+    background: linear-gradient(90deg, rgba(240,192,64,0.06) 0%, transparent 25%, rgba(79,195,247,0.04) 50%, transparent 75%, rgba(240,192,64,0.04) 100%);
+    animation: shimmer 6s linear infinite;
+  }
+  @keyframes shimmer { from{background-position:0 0} to{background-position:400px 0} }
+
+  .header-inner {
+    display:flex; align-items:center; padding:18px 35px; gap:20px; position:relative; z-index:1;
+  }
+  .header-bars { display:flex; flex-direction:column; gap:4px; }
+  .hbar { height:6px; border-radius:3px; box-shadow:0 0 12px currentColor; animation:barPulse 2s ease-in-out infinite; }
+  .hbar:nth-child(1) { width:50px; background:var(--gold); color:var(--gold); }
+  .hbar:nth-child(2) { width:35px; background:var(--blue); color:var(--blue); animation-delay:0.3s; }
+  .hbar:nth-child(3) { width:25px; background:var(--red); color:var(--red); animation-delay:0.6s; }
+  @keyframes barPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .header-text { flex:1; }
+  .htitle { font-family:'Orbitron',monospace; font-size:1.8em; font-weight:900; color:var(--gold); text-shadow:0 0 25px rgba(240,192,64,0.7); letter-spacing:3px; }
+  .hsub { font-family:'Share Tech Mono',monospace; font-size:0.8em; color:var(--blue); margin-top:5px; letter-spacing:2px; }
+  .hmeta { font-family:'Share Tech Mono',monospace; font-size:0.65em; color:var(--text-dim); margin-top:3px; }
+  .emblem { font-size:3em; filter:drop-shadow(0 0 15px rgba(240,192,64,0.8)); animation:float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+  /* NAV */
+  .nav {
+    background:#010c18; border-bottom:2px solid var(--border);
+    padding:0 35px; display:flex; gap:2px; overflow-x:auto;
+    position:sticky; top:0; z-index:100;
+  }
+  .tab {
+    font-family:'Orbitron',monospace; font-size:0.55em; font-weight:700;
+    padding:12px 16px; cursor:pointer; border:none; background:transparent;
+    color:var(--text-dim); letter-spacing:1px; text-transform:uppercase;
+    border-bottom:3px solid transparent; transition:all 0.25s; white-space:nowrap;
+  }
+  .tab:hover { color:var(--blue); background:rgba(79,195,247,0.05); }
+  .tab.active { color:var(--gold); border-bottom-color:var(--gold); background:rgba(240,192,64,0.06); }
+
+  /* CONTENT */
+  .content { padding:30px 35px; max-width:1400px; margin:0 auto; }
+  .section { display:none; animation:fadeUp 0.3s ease; }
+  .section.active { display:block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  /* INTRO PANEL */
+  .intro-panel {
+    background: linear-gradient(135deg, rgba(3,21,36,0.9), rgba(13,58,110,0.2));
+    border:1px solid var(--blue); border-left:4px solid var(--gold);
+    border-radius:4px; padding:20px 25px; margin-bottom:25px;
+    position:relative; overflow:hidden;
+  }
+  .intro-panel::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .intro-title {
+    font-family:'Orbitron',monospace; font-size:0.9em; font-weight:700;
+    color:var(--gold); letter-spacing:2px; text-transform:uppercase; margin-bottom:10px;
+  }
+  .intro-text { font-size:0.9em; color:var(--text); line-height:1.7; }
+  .intro-text strong { color:var(--blue); }
+
+  /* COMMAND CARD */
+  .cmd-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(580px, 1fr)); gap:20px; }
+  
+  .cmd-card {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:4px; overflow:hidden; position:relative;
+    transition:transform 0.2s, box-shadow 0.2s;
+  }
+  .cmd-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 6px 30px rgba(79,195,247,0.15);
+  }
+  .cmd-card::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:1px;
+    background:linear-gradient(90deg, transparent, var(--blue)80, transparent);
+  }
+
+  .cmd-header {
+    background:linear-gradient(90deg, rgba(13,58,110,0.5), rgba(3,21,36,0.9));
+    padding:12px 18px; border-bottom:1px solid rgba(13,58,110,0.4);
+    display:flex; align-items:center; gap:10px;
+  }
+  .cmd-icon { font-size:1.2em; }
+  .cmd-title {
+    font-family:'Orbitron',monospace; font-size:0.72em; font-weight:700;
+    color:var(--gold); letter-spacing:2px; text-transform:uppercase; flex:1;
+  }
+  .cmd-badge {
+    font-family:'Share Tech Mono',monospace; font-size:0.65em;
+    padding:2px 8px; border-radius:2px; border:1px solid;
+  }
+  .badge-safe { color:var(--green); border-color:rgba(0,230,118,0.3); background:rgba(0,230,118,0.08); }
+  .badge-warn { color:var(--gold); border-color:rgba(240,192,64,0.3); background:rgba(240,192,64,0.08); }
+  .badge-danger { color:var(--red); border-color:rgba(239,83,80,0.3); background:rgba(239,83,80,0.08); }
+  .badge-info { color:var(--blue); border-color:rgba(79,195,247,0.3); background:rgba(79,195,247,0.08); }
+
+  .cmd-desc { padding:12px 18px; font-size:0.82em; color:var(--text-dim); line-height:1.6; border-bottom:1px solid rgba(13,58,110,0.3); }
+  .cmd-desc strong { color:var(--text); }
+
+  .cmd-code-wrap { padding:14px 18px; position:relative; }
+  .cmd-code {
+    background:rgba(0,0,0,0.4); border:1px solid rgba(13,58,110,0.5);
+    border-radius:3px; padding:14px 16px; padding-right:50px;
+    font-family:'Share Tech Mono',monospace; font-size:0.8em;
+    color:#a5d6a7; white-space:pre-wrap; word-break:break-all; line-height:1.6;
+  }
+  .cmd-code .comment { color:rgba(79,195,247,0.5); }
+  
+  .copy-btn {
+    position:absolute; top:22px; right:26px;
+    background:rgba(13,58,110,0.5); border:1px solid var(--border);
+    color:var(--blue); font-family:'Share Tech Mono',monospace; font-size:0.7em;
+    padding:5px 10px; border-radius:2px; cursor:pointer; transition:all 0.2s;
+    letter-spacing:1px;
+  }
+  .copy-btn:hover { background:rgba(79,195,247,0.15); color:var(--gold); border-color:var(--gold); }
+  .copy-btn.copied { color:var(--green); border-color:var(--green); background:rgba(0,230,118,0.1); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family:'Orbitron',monospace; font-size:1.1em; font-weight:900;
+    color:var(--gold); letter-spacing:3px; text-transform:uppercase;
+    margin-bottom:20px; padding-bottom:10px;
+    border-bottom:1px solid rgba(240,192,64,0.2);
+    display:flex; align-items:center; gap:12px;
+  }
+  .section-title::before { content:''; width:40px; height:3px; background:var(--gold); border-radius:2px; box-shadow:0 0 10px var(--gold); }
+
+  /* WARNING BOX */
+  .warn-box {
+    background:rgba(239,83,80,0.08); border:1px solid rgba(239,83,80,0.3);
+    border-left:4px solid var(--red); border-radius:3px;
+    padding:12px 16px; margin:0 18px 14px;
+    font-family:'Share Tech Mono',monospace; font-size:0.75em; color:var(--red);
+    display:flex; gap:8px; align-items:flex-start;
+  }
+
+  /* FOOTER */
+  .footer {
+    background:#010c18; border-top:2px solid var(--gold);
+    padding:12px 35px; display:flex; justify-content:space-between;
+    align-items:center; font-family:'Share Tech Mono',monospace;
+    font-size:0.65em; color:var(--text-dim); flex-wrap:wrap; gap:8px;
+    margin-top:40px;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:5px; height:5px; }
+  ::-webkit-scrollbar-track { background:#010d1a; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--blue); }
+
+  @media(max-width:768px) {
+    .cmd-grid { grid-template-columns:1fr; }
+    .header-inner { padding:15px 20px; }
+    .content { padding:20px; }
+    .htitle { font-size:1.2em; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-bars">
+      <div class="hbar"></div>
+      <div class="hbar"></div>
+      <div class="hbar"></div>
+    </div>
+    <div class="header-text">
+      <div class="htitle">LCARS // POWERSHELL DATABÁZE</div>
+      <div class="hsub">HVĚZDNÁ FLOTILA — WINDOWS PŘÍKAZY & SPRÁVA SYSTÉMU</div>
+      <div class="hmeta">VICE ADMIRAL JIŘÍK &nbsp;|&nbsp; STANICE: DESKTOP-GLDFRSU &nbsp;|&nbsp; VERZE: 1.0</div>
+    </div>
+    <div class="emblem">🖖</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button class="tab active" onclick="show('drivery', this)">🔧 Drivery</button>
+  <button class="tab" onclick="show('system', this)">⚙️ Systém</button>
+  <button class="tab" onclick="show('disk', this)">💾 Disk & Úložiště</button>
+  <button class="tab" onclick="show('sit', this)">🌐 Síť</button>
+  <button class="tab" onclick="show('vbs', this)">🛡️ VBS & Security</button>
+  <button class="tab" onclick="show('logy', this)">📋 Logy</button>
+  <button class="tab" onclick="show('ram', this)">🧠 RAM & CPU</button>
+  <button class="tab" onclick="show('napajeni', this)">⚡ Napájení</button>
+</div>
+
+<div class="content">
+
+<!-- ===== DRIVERY ===== -->
+<div id="drivery" class="section active">
+  <div class="section-title">🔧 Správa Ovladačů</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Tato sekce obsahuje příkazy pro správu ovladačů zařízení ve Windows. Klíčový problém je že <strong>Windows Update stahuje certifikované ovladače</strong> — ty mohou být zastaralé až 6–12 měsíců za verzí od výrobce. Proto je důležité umět stahování ovladačů blokovat a řídit manuálně. Všechny příkazy spouštěj jako <strong>Administrator</strong>.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🚫</span>
+        <span class="cmd-title">Blokovat stahování driverů přes Windows Update</span>
+        <span class="cmd-badge badge-warn">DOPORUČENO</span>
+      </div>
+      <div class="cmd-desc">
+        Zabrání Windows Update automaticky přepisovat ovladače. <strong>Použij po každé čisté instalaci driveru od výrobce</strong> — zabrání Windows aby přepsal tvůj nový driver starší certifikovanou verzí. Platí pro NVIDIA, AMD i Bluetooth.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zakazat automaticke stazeni driveru pres Windows Update</span>
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /v "ExcludeWUDriversInQualityUpdate" /t REG_DWORD /d 1 /f</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">✅</span>
+        <span class="cmd-title">Výjimka — Dočasně povolit stahování driverů</span>
+        <span class="cmd-badge badge-info">NOUZE</span>
+      </div>
+      <div class="cmd-desc">
+        Dočasně povolí Windows stáhnout driver. <strong>Použij pouze při problému s driverem</strong> kdy potřebuješ záložní verzi od Windows. Po vyřešení problému ihned znovu zablokuj příkazem výše!
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Docasne povolit stazeni driveru pres Windows Update (POUZE NOUZOVE!)</span>
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" /v "ExcludeWUDriversInQualityUpdate" /t REG_DWORD /d 0 /f</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔍</span>
+        <span class="cmd-title">Zobrazit všechny nainstalované ovladače</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše kompletní seznam všech nainstalovaných ovladačů včetně verze a data. Užitečné pro <strong>kontrolu aktuálnosti driverů</strong> před a po aktualizaci.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vypsat vsechny nainstalovane ovladace</span>
+Get-WmiObject Win32_PnPSignedDriver | 
+Select-Object DeviceName, DriverVersion, DriverDate, Manufacturer | 
+Sort-Object DeviceName | Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔵</span>
+        <span class="cmd-title">Zobrazit Bluetooth zařízení a ovladače</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí všechna Bluetooth zařízení a jejich ovladače. <strong>Použij před odinstalací BT driveru</strong> pro zjištění přesného názvu zařízení a výrobce ovladače.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit Bluetooth zarizeni a ovladace</span>
+Get-PnpDevice -Class Bluetooth | 
+Select-Object FriendlyName, Status, DeviceID | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">⚠️</span>
+        <span class="cmd-title">Zobrazit zařízení s chybou (žlutý vykřičník)</span>
+        <span class="cmd-badge badge-warn">DIAGNOSTIKA</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše všechna zařízení která mají problém s ovladačem — ekvivalent <strong>žlutého vykřičníku ve Správci zařízení</strong>. Rychlý přehled co potřebuje pozornost.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit zarizeni s chybou ovladace</span>
+Get-PnpDevice | 
+Where-Object {$_.Status -ne "OK"} | 
+Select-Object FriendlyName, Status, Class | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔄</span>
+        <span class="cmd-title">Zkontrolovat stav Windows Update blokace driverů</span>
+        <span class="cmd-badge badge-info">KONTROLA</span>
+      </div>
+      <div class="cmd-desc">
+        Ověří zda je blokace stahování driverů aktivní. <strong>Hodnota 1 = blokace aktivní</strong> (správně). Hodnota 0 nebo žádná hodnota = Windows může stahovat drivery sám.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zkontrolovat stav blokace driveru Windows Update</span>
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate" -Name "ExcludeWUDriversInQualityUpdate" -ErrorAction SilentlyContinue</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== SYSTEM ===== -->
+<div id="system" class="section">
+  <div class="section-title">⚙️ Správa Systému</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro správu a diagnostiku Windows systému. Zahrnuje kontrolu integrity systémových souborů, správu služeb, informace o systému a další užitečné nástroje. <strong>SFC a DISM jsou klíčové nástroje</strong> pro opravu poškozených systémových souborů. Spouštěj jako <strong>Administrator</strong>.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔍</span>
+        <span class="cmd-title">SFC — Kontrola integrity systémových souborů</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        System File Checker prohledá všechny chráněné systémové soubory a opraví poškozené. <strong>Spusť při podezření na poškozené Windows soubory.</strong> Trvá 10–20 minut.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Kontrola a oprava systemovych souboru</span>
+sfc /scannow</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🛠️</span>
+        <span class="cmd-title">DISM — Oprava Windows obrazu</span>
+        <span class="cmd-badge badge-warn">POKROČILÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Deployment Image Servicing opravuje Windows obrazu. <strong>Spusť před SFC nebo pokud SFC hlásí chyby</strong> které nedokáže opravit. Vyžaduje připojení k internetu.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Oprava Windows obrazu pres DISM</span>
+DISM /Online /Cleanup-Image /RestoreHealth</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📊</span>
+        <span class="cmd-title">Informace o systému</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí kompletní informace o systému — verze Windows, RAM, CPU, datum instalace. <strong>Užitečné pro rychlý přehled</strong> bez otevírání Správce zařízení.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Kompletni informace o systemu</span>
+Get-ComputerInfo | Select-Object WindowsProductName, WindowsVersion, TotalPhysicalMemory, CsProcessors</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔄</span>
+        <span class="cmd-title">Zobrazit běžící služby</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše všechny aktuálně běžící služby. <strong>Užitečné pro identifikaci služeb</strong> které zbytečně žerou RAM nebo způsobují problémy.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit vsechny bezici sluzby</span>
+Get-Service | 
+Where-Object {$_.Status -eq "Running"} | 
+Select-Object Name, DisplayName, Status | 
+Sort-Object DisplayName | Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">⏱️</span>
+        <span class="cmd-title">Zobrazit dobu od posledního spuštění</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí přesný čas posledního bootu a jak dlouho systém běží. <strong>Užitečné pro sledování stability</strong> — jak dlouho systém drží bez crashe.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Cas posledniho bootu a uptime</span>
+$boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+$uptime = (Get-Date) - $boot
+Write-Host "Posledni boot: $boot"
+Write-Host "Uptime: $($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🗑️</span>
+        <span class="cmd-title">Vyčistit dočasné soubory Windows</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Smaže dočasné soubory Windows a uživatelský Temp složku. <strong>Bezpečné spustit kdykoliv</strong> — uvolní místo na disku C: bez rizika ztráty dat.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vycistit docasne soubory</span>
+Remove-Item -Path "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "✅ Temp slozky vycisteny!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== DISK ===== -->
+<div id="disk" class="section">
+  <div class="section-title">💾 Disk & Úložiště</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro správu disků, kontrolu zdraví a analýzu využití místa. <strong>CHKDSK je klíčový nástroj</strong> pro kontrolu chyb na disku — zvláště důležité při výskytu ID:153 disk IO chyb v Event Logu. M.2 NVMe disky bez DDR cache jsou závislé na RAM pro HMB — plný disk způsobuje IO chyby.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📊</span>
+        <span class="cmd-title">Zobrazit využití místa na všech discích</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Přehledný výpis všech disků s využitím místa v GB. <strong>Rychlá kontrola</strong> bez otevírání Průzkumníka souborů.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Prehled vyuziti disku</span>
+Get-PSDrive -PSProvider FileSystem | 
+Select-Object Name, @{N="Celkem GB";E={[math]::Round($_.Used/1GB+$_.Free/1GB,1)}}, @{N="Volne GB";E={[math]::Round($_.Free/1GB,1)}}, @{N="Obsazeno %";E={[math]::Round($_.Used/($_.Used+$_.Free)*100,1)}} | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔍</span>
+        <span class="cmd-title">Najít největší soubory na disku</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Najde TOP 20 největších souborů na disku C:. <strong>Užitečné pro uvolnění místa</strong> — odhalí zapomenuté ISO soubory, staré zálohy nebo velké instalátory.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># TOP 20 nejvetsi soubory na C:</span>
+Get-ChildItem C:\ -Recurse -ErrorAction SilentlyContinue | 
+Sort-Object Length -Descending | 
+Select-Object -First 20 FullName, @{N="MB";E={[math]::Round($_.Length/1MB,1)}} | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🏥</span>
+        <span class="cmd-title">CHKDSK — Kontrola zdraví disku</span>
+        <span class="cmd-badge badge-warn">RESTART NUTNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Naplánuje kontrolu disku C: při příštím restartu. <strong>Spusť při výskytu ID:153 disk IO chyb</strong> nebo podezření na poškozený filesystem. Trvá 15–30 minut při bootu.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Naplánovat CHKDSK pri pristem restartu</span>
+chkdsk C: /f /r /x</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🧹</span>
+        <span class="cmd-title">Optimalizace a defragmentace disku</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Pro SSD provede TRIM optimalizaci, pro HDD defragmentaci. <strong>Pro M.2 NVMe disky</strong> použij Optimize — provede TRIM který zlepší výkon a životnost.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Optimalizace disku C: (TRIM pro SSD, defrag pro HDD)</span>
+Optimize-Volume -DriveLetter C -Verbose</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📋</span>
+        <span class="cmd-title">Zobrazit informace o fyzických discích</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí typ disku (SSD/HDD/NVMe), model a velikost. <strong>Užitečné pro identifikaci</strong> zda disk podporuje TRIM a jaký typ je nainstalován.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Informace o fyzickych discich</span>
+Get-PhysicalDisk | 
+Select-Object FriendlyName, MediaType, Size, HealthStatus, OperationalStatus | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🗑️</span>
+        <span class="cmd-title">Vyčistit Windows Update cache</span>
+        <span class="cmd-badge badge-warn">ADMIN</span>
+      </div>
+      <div class="cmd-desc">
+        Smaže stažené ale nenainstalované Windows Update soubory. <strong>Uvolní klidně 5–15 GB</strong> na disku C: bez jakéhokoliv rizika. Update soubory se stáhnou znovu až bude potřeba.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vyciistit Windows Update cache</span>
+Stop-Service wuauserv -Force
+Remove-Item "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
+Start-Service wuauserv
+Write-Host "✅ Windows Update cache vycistena!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== SIT ===== -->
+<div id="sit" class="section">
+  <div class="section-title">🌐 Správa Sítě</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro diagnostiku a správu síťového připojení. <strong>Flush DNS</strong> řeší problémy s načítáním webů, reset Winsock opravuje poškozené síťové nastavení. Užitečné při problémech s WiFi nebo pomalým připojením.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔄</span>
+        <span class="cmd-title">Flush DNS cache</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Vymaže DNS cache — <strong>řeší problémy s načítáním webů</strong> nebo přístupen k sítí po změně nastavení. Bezpečné spustit kdykoliv.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vymazat DNS cache</span>
+ipconfig /flushdns
+Write-Host "✅ DNS cache vycistena!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🛠️</span>
+        <span class="cmd-title">Reset Winsock a TCP/IP</span>
+        <span class="cmd-badge badge-warn">RESTART NUTNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Resetuje síťový stack Windows. <strong>Použij při závažných problémech se sítí</strong> — nefungující WiFi, nemožnost připojení, pomalé DNS. Po příkazu je nutný restart.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Reset Winsock a TCP/IP stacku</span>
+netsh winsock reset
+netsh int ip reset
+ipconfig /release
+ipconfig /renew
+ipconfig /flushdns</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📊</span>
+        <span class="cmd-title">Zobrazit síťové adaptéry a IP adresy</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Přehled všech síťových adaptérů, jejich IP adres a stavu. <strong>Rychlá diagnostika</strong> síťového připojení.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Prehled sitovych adapteru</span>
+Get-NetIPAddress | 
+Select-Object InterfaceAlias, IPAddress, AddressFamily, PrefixLength | 
+Where-Object {$_.AddressFamily -eq "IPv4"} | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔍</span>
+        <span class="cmd-title">Test rychlosti DNS serverů</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Otestuje odezvu DNS serveru. <strong>Hodnota pod 10ms je výborná</strong>, nad 50ms může způsobovat pomalé načítání webů.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Test odezvy DNS serveru</span>
+Resolve-DnsName google.com -Server 8.8.8.8 | Select-Object Name, QueryType, IPAddress
+Resolve-DnsName google.com -Server 1.1.1.1 | Select-Object Name, QueryType, IPAddress</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== VBS ===== -->
+<div id="vbs" class="section">
+  <div class="section-title">🛡️ VBS & Security</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro správu VBS (Virtualization Based Security). <strong>VBS byl hlavní příčinou 2 let kernel crashů</strong> na tomto systému — registry říkaly VBS zapnuto, BIOS měl SVM vypnuto a kernel panikoval. Tyto příkazy zajistí čistý stav VBS nastavení. Spouštěj jako <strong>Administrator</strong>.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔍</span>
+        <span class="cmd-title">Zkontrolovat aktuální stav VBS</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí aktuální hodnotu VBS v registry. <strong>Hodnota 0 = VBS vypnuto (správně pro tento systém)</strong>. Hodnota 1 = VBS zapnuto = potenciální příčina kernel crashů pokud BIOS nemá SVM zapnuté.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zkontrolovat stav VBS v registry</span>
+Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" | Select-Object Enable*</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🧹</span>
+        <span class="cmd-title">Kompletní VBS Registry Cleanup</span>
+        <span class="cmd-badge badge-danger">ADMIN NUTNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        <strong>Klíčový příkaz pro tento systém!</strong> Vymaže VBS registry klíče které způsobovaly kernel crashe. Použij pokud se vrátí ID:41 kernel pady a VBS hodnota je 1.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Kompletni VBS cleanup - spustit jako ADMIN</span>
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "EnableVirtualizationBasedSecurity" /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "RequirePlatformSecurityFeatures" /t REG_DWORD /d 0 /f
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v "Enabled" /t REG_DWORD /d 0 /f
+Write-Host "✅ VBS registry vycisteny! Restartuj PC." -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔒</span>
+        <span class="cmd-title">Zobrazit stav Secure Boot</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zkontroluje zda je Secure Boot aktivní. <strong>Secure Boot by měl být zapnutý</strong> — chrání boot proces před malwarem. Na tomto systému je zapnutý správně.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zkontrolovat stav Secure Boot</span>
+Confirm-SecureBootUEFI</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🛡️</span>
+        <span class="cmd-title">Zobrazit stav Windows Defenderu</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Přehled stavu Windows Defender antiviru — verze definic, čas posledního skenu. <strong>Definice by měly být aktuální</strong> — datum ne starší než 3 dny.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Stav Windows Defender</span>
+Get-MpComputerStatus | 
+Select-Object AntivirusEnabled, RealTimeProtectionEnabled, AntivirusSignatureLastUpdated, QuickScanAge | 
+Format-List</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== LOGY ===== -->
+<div id="logy" class="section">
+  <div class="section-title">📋 Správa Logů</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro správu Windows Event Logů. <strong>Klíčové ID události:</strong> ID:41 = Kernel Power crash, ID:153 = Disk IO chyba, ID:5 = Bluetooth HCI chyba. Windows logy nečistí automaticky podle měsíce — přepisuje jen podle velikosti souboru (20MB). <strong>Doporučený reset logů: 1x měsíčně.</strong>
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🗑️</span>
+        <span class="cmd-title">Vymazat VŠECHNY Event Logy (měsíční reset)</span>
+        <span class="cmd-badge badge-warn">ADMIN</span>
+      </div>
+      <div class="cmd-desc">
+        Smaže všechny Windows Event Logy — <strong>ideální pro měsíční reset</strong> čistých dat. Po vymazání spusť diagnostický script pro čistý report bez historických dat.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vymazat vsechny Event Logy - mesicni reset</span>
+Get-WinEvent -ListLog * | ForEach-Object { 
+    wevtutil cl $_.LogName 2>$null 
+}
+Write-Host "✅ Vsechny logy vycisteny!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">💥</span>
+        <span class="cmd-title">Zobrazit Kernel Power pady (ID:41)</span>
+        <span class="cmd-badge badge-danger">DIAGNOSTIKA</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše všechny Kernel Power crashe z Event Logu. <strong>Nulový výstup = žádné crashe = systém je stabilní.</strong> Spusť při podezření na nový crash.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit vsechny Kernel Power pady ID:41</span>
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=41} -ErrorAction SilentlyContinue | 
+Select-Object TimeCreated, Id, Message | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">💾</span>
+        <span class="cmd-title">Zobrazit Disk IO chyby (ID:153)</span>
+        <span class="cmd-badge badge-warn">DIAGNOSTIKA</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše disk IO chyby. <strong>Pozor:</strong> některé ID:153 záznamy jsou jen VBS bootovací hlášky — přečti zprávu pro rozlišení skutečné disk IO chyby.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit Disk IO chyby ID:153</span>
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=153} -ErrorAction SilentlyContinue | 
+Select-Object TimeCreated, Id, Message | 
+Format-Table -AutoSize -Wrap</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔵</span>
+        <span class="cmd-title">Zobrazit Bluetooth chyby (ID:5)</span>
+        <span class="cmd-badge badge-warn">DIAGNOSTIKA</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše Bluetooth HCI chyby. <strong>Více než 5 záznamů za den = driver problém</strong> který je potřeba řešit přeinstalací Realtek Bluetooth driveru přímo od výrobce.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit Bluetooth HCI chyby ID:5</span>
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=5} -ErrorAction SilentlyContinue | 
+Select-Object TimeCreated, Id, Message | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📋</span>
+        <span class="cmd-title">Zobrazit systémové chyby za posledních 24h</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Vypíše všechny systémové chyby za posledních 24 hodin. <strong>Ranní kontrola stability</strong> — rychlý přehled co se dělo přes noc.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Systemove chyby za poslednich 24h</span>
+$cas = (Get-Date).AddHours(-24)
+Get-WinEvent -FilterHashtable @{LogName='System'; Level=2; StartTime=$cas} -ErrorAction SilentlyContinue | 
+Select-Object TimeCreated, Id, Message | 
+Sort-Object TimeCreated -Descending | 
+Format-Table -AutoSize -Wrap</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== RAM ===== -->
+<div id="ram" class="section">
+  <div class="section-title">🧠 RAM & CPU Diagnostika</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro diagnostiku RAM a CPU. Tento systém má <strong>mismatched RAM — DIMM A: 2667 MHz, DIMM B: 3200 MHz</strong> — obě Samsung, běží na 2667 MHz. M.2 NVMe bez DDR cache používá HMB z RAM, proto vysoké využití RAM může způsobovat IO chyby. RAM test spusť při výskytu nových kernel padů ID:41.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🧠</span>
+        <span class="cmd-title">Test RAM paměti (Windows Memory Diagnostic)</span>
+        <span class="cmd-badge badge-warn">RESTART NUTNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Naplánuje test RAM při příštím restartu. <strong>Spusť při výskytu nových kernel padů ID:41</strong> nebo při podezření na vadnou RAM. Test trvá 10–20 minut.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Naplánovat RAM test pri pristim restartu</span>
+mdsched.exe</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📊</span>
+        <span class="cmd-title">Zobrazit RAM moduly a frekvence</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Detailní informace o fyzických RAM modulech — výrobce, part number, frekvence, kapacita. <strong>Slouží k ověření mismatched RAM</strong> konfigurace.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Informace o RAM modulech</span>
+Get-WmiObject Win32_PhysicalMemory | 
+Select-Object BankLabel, Capacity, Speed, Manufacturer, PartNumber | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📈</span>
+        <span class="cmd-title">Zobrazit aktuální využití RAM</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Aktuální využití RAM v GB a procentech. <strong>Nad 85% = riziko</strong> pro M.2 bez DDR cache — HMB má málo prostoru a mohou nastat IO chyby.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Aktualni vyuziti RAM</span>
+$os = Get-CimInstance Win32_OperatingSystem
+$total = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+$free = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+$used = [math]::Round($total - $free, 2)
+$pct = [math]::Round($used/$total*100, 1)
+Write-Host "Celkem: ${total} GB | Volno: ${free} GB | Obsazeno: ${used} GB (${pct}%)"</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🔥</span>
+        <span class="cmd-title">TOP 10 procesů žeroucích RAM</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí 10 procesů s největším využitím RAM. <strong>Užitečné pro identifikaci</strong> aplikace která způsobuje vysoké využití paměti — Minecraft, prohlížeč nebo pozadím běžící procesy.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># TOP 10 procesu zrouc RAM</span>
+Get-Process | 
+Sort-Object WorkingSet -Descending | 
+Select-Object -First 10 Name, @{N="RAM MB";E={[math]::Round($_.WorkingSet/1MB,1)}}, CPU | 
+Format-Table -AutoSize</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== NAPAJENI ===== -->
+<div id="napajeni" class="section">
+  <div class="section-title">⚡ Napájení & C-States</div>
+
+  <div class="intro-panel">
+    <div class="intro-title">📡 O této sekci</div>
+    <div class="intro-text">
+      Příkazy pro správu napájení a C-States procesoru. <strong>C-States jsou na tomto systému VYPNUTÉ</strong> — správná konfigurace pro M.2 NVMe bez DDR cache, protože CPU musí být vždy dostupný pro HMB operace bez prodlevy uspoření energie. Napájecí plán je nastaven na Špičkový výkon.
+    </div>
+  </div>
+
+  <div class="cmd-grid">
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">✅</span>
+        <span class="cmd-title">Vypnout C-States (doporučeno pro NVMe)</span>
+        <span class="cmd-badge badge-safe">DOPORUČENO</span>
+      </div>
+      <div class="cmd-desc">
+        Vypne CPU C-States úsporné stavy. <strong>Kritické pro stabilitu M.2 NVMe bez DDR cache</strong> — CPU zůstane v C0 a okamžitě reaguje na HMB požadavky disku bez prodlevy.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Vypnout C-States pro NVMe stabilitu</span>
+powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR IDLEDISABLE 1
+powercfg -setactive SCHEME_CURRENT
+Write-Host "✅ C-States vypnuty!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">🚀</span>
+        <span class="cmd-title">Nastavit napájecí plán Špičkový výkon</span>
+        <span class="cmd-badge badge-safe">DOPORUČENO</span>
+      </div>
+      <div class="cmd-desc">
+        Aktivuje napájecí plán Špičkový výkon — <strong>CPU jede na maximum bez throttlování</strong>. Ideální pro gaming a práci, na baterii zvyšuje spotřebu.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Aktivovat Spickovy vykon napajeci plan</span>
+powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+Write-Host "✅ Spickovy vykon aktivovan!" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📊</span>
+        <span class="cmd-title">Zobrazit aktuální napájecí plán</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Zobrazí aktivní napájecí plán a seznam všech dostupných plánů. <strong>Ověří že Špičkový výkon je aktivní</strong> a C-States jsou správně nastavené.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Zobrazit napajeci plan</span>
+powercfg /getactivescheme
+powercfg /list</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+    <div class="cmd-card">
+      <div class="cmd-header">
+        <span class="cmd-icon">📋</span>
+        <span class="cmd-title">Zpráva o energetické náročnosti systému</span>
+        <span class="cmd-badge badge-safe">BEZPEČNÝ</span>
+      </div>
+      <div class="cmd-desc">
+        Vygeneruje detailní HTML report o energetické náročnosti systému. <strong>Odhalí problémy s napájením</strong> a zařízení která brání úspornému režimu. Report se uloží na C:.
+      </div>
+      <div class="cmd-code-wrap">
+        <pre class="cmd-code"><span class="comment"># Generovat report energeticke narocnosti</span>
+powercfg /energy /output "C:\energy-report.html"
+Write-Host "✅ Report ulozen: C:\energy-report.html" -ForegroundColor Green</pre>
+        <button class="copy-btn" onclick="copyCmd(this)">KOPÍROVAT</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>🖖 LCARS POWERSHELL DATABÁZE v1.0 &nbsp;|&nbsp; VICE ADMIRAL JIŘÍK</span>
+  <span>HVĚZDNÁ FLOTILA — DESKTOP-GLDFRSU &nbsp;|&nbsp; Windows 11 Home</span>
+  <span>⚠️ Vždy spouštěj jako Administrator &nbsp;|&nbsp; Záloha před změnami!</span>
+</div>
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function copyCmd(btn) {
+  const code = btn.previousElementSibling.innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✅ ZKOPÍROVÁNO';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'KOPÍROVAT';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>
