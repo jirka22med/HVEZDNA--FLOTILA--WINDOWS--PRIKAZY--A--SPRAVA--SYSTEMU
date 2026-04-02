@@ -454,3 +454,325 @@ Tento projekt vznikl ve spolupráci s:
 ![C_STATES](https://img.shields.io/badge/C--STATES-VYPNUTO-00e676?style=flat-square)
 
 </div>
+
+
+
+# 🖖 Hvězdná Flotila — LCARS Diagnostický Skript v3.1 ULTIMATE
+
+> **Kompletní systémový skener Windows 11 s exportem do HTML reportu ve stylu Star Trek LCARS**  
+> Vytvořeno více admirálem Jiříkem | Hvězdná flotila — osobní projekt
+
+---
+
+## 📋 Obsah
+
+- [Popis projektu](#-popis-projektu)
+- [Ukázka výstupu](#-ukázka-výstupu)
+- [Požadavky](#-požadavky)
+- [Instalace a spuštění](#-instalace-a-spuštění)
+- [Scanning moduly — 16 sekcí](#-scanning-moduly--16-sekcí)
+- [LCARS Dashboard — přehled panelů](#-lcars-dashboard--přehled-panelů)
+- [Skóre zdraví systému](#-skóre-zdraví-systému)
+- [Nastavení limitů záznamů](#-nastavení-limitů-záznamů)
+- [Changelog](#-changelog)
+- [Struktura exportu](#-struktura-exportu)
+- [Technické poznámky](#-technické-poznámky)
+- [Autoři](#-autoři)
+
+---
+
+## 🚀 Popis projektu
+
+**StarTrek-Diagnostika** je PowerShell skript, který provede hloubkový sken Windows 11 a vygeneruje interaktivní HTML report ve vizuálním stylu Star Trek LCARS (Library Computer Access and Retrieval System).
+
+Script prochází **16 diagnostických modulů** — od hardwaru, přes systémové logy, síť, procesy, až po bezpečnostní audit. Výsledek je plnohodnotný HTML dashboard s přepínacími záložkami, progress bary, barevnými odznaky a animacemi.
+
+### ✨ Klíčové vlastnosti
+
+| Funkce | Popis |
+|--------|-------|
+| 🏠 **Dashboard** | Přehled všech kritických hodnot na jedné obrazovce |
+| ⏱️ **Crash Timer** | Počítadlo hodin bez Kernel Power pádu (Event ID 41) |
+| 💯 **Health Score** | Automatické skóre zdraví systému 0–100 |
+| 🎨 **LCARS UI** | Star Trek vizuální styl s animacemi a barvami |
+| 📊 **Status Bar** | Real-time statusový pruh se stavem všech subsystémů |
+| 🔌 **18 záložek** | Plně přepínatelné sekce bez reloadu stránky |
+| ⚡ **C-States** | Detekce stavu CPU power management |
+| 🔩 **AMD PSP** | Zobrazení stavu AMD Platform Security Processor |
+| 💾 **Disk IO** | Správné zachycení ID 153 jako Disk IO chyby (ne VBS!) |
+
+---
+
+## 🖥️ Ukázka výstupu
+
+```
+🖖 HVEZDNA FLOTILA LCARS v3.1 ULTIMATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ WARP: ONLINE | KERNEL PADY: 0 | DRIVERY: OK
+ RAM: 45% | DISKY: 0 KRITICKÉ | ZDRAVÍ: 87/100
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Záložky: Dashboard | Hardware | RAM | BIOS |
+          Baterie | Teploty | Logy | Security |
+          Drivery | Procesy | Služby | Síť |
+          Porty | Sdílení | Autostart | Updates |
+          Programy | Uživatelé
+```
+
+HTML report se automaticky otevře v prohlížeči po dokončení skenování.
+
+---
+
+## 📦 Požadavky
+
+| Požadavek | Minimum |
+|-----------|---------|
+| **OS** | Windows 10 / Windows 11 |
+| **PowerShell** | 5.1 nebo novější (doporučeno PS 7+) |
+| **Práva** | Spustit jako **Správce (Administrator)** |
+| **Místo na disku** | ~500 KB pro HTML report |
+| **Připojení k internetu** | Pouze pro Google Fonts v HTML výstupu |
+
+> ⚠️ Bez práv správce některé moduly (TPM, Security Log, Defender) nemusí vrátit kompletní data.
+
+---
+
+## 🛠️ Instalace a spuštění
+
+### 1. Stažení skriptu
+
+```powershell
+# Přímé stažení přes PowerShell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/jirka22med/<repo>/main/StarTrek-Diagnostika-v6-1-ULTIMATE.ps1" -OutFile "StarTrek-Diagnostika.ps1"
+```
+
+nebo ručně stáhni soubor `StarTrek-Diagnostika-v6-1-ULTIMATE.ps1` z tohoto repozitáře.
+
+### 2. Nastavení cesty pro export
+
+Ve skriptu uprav proměnnou `$ExportPath` podle svého systému:
+
+```powershell
+$ExportPath = "C:\Users\TVOJE_JMENO\Desktop\export-slozka-pro-pokrocily-script-poweshale"
+```
+
+### 3. Povolení spuštění skriptů (pokud potřeba)
+
+```powershell
+# Spustit v PowerShell jako Správce
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+### 4. Spuštění
+
+```powershell
+# Klikni pravým tlačítkem → "Spustit jako správce"
+# nebo v PowerShell konzoli jako Správce:
+.\StarTrek-Diagnostika-v6-1-ULTIMATE.ps1
+```
+
+Po dokončení skenování se report automaticky otevře v prohlížeči.
+
+---
+
+## 📡 Scanning moduly — 16 sekcí
+
+Script sbírá data v 16 sekvenčních krocích:
+
+| # | Modul | Sbíraná data |
+|---|-------|-------------|
+| 01 | **Hardware** | CPU, RAM, GPU, disky, OS, základní deska |
+| 02 | **RAM moduly** | Fyzické sloty, frekvence, výrobce, kapacita |
+| 03 | **BIOS & Firmware** | Verze, datum, SMBIOS, S/N |
+| 04 | **TPM / VBS / Security** | TPM, VBS, Secure Boot, Defender, **C-States**, **AMD PSP** |
+| 05 | **Baterie & Napájení** | Stav baterie, kapacita, napájecí plán |
+| 06 | **Teploty & Ventilátory** | ACPI teplotní zóny (WMI), ventilátory |
+| 07 | **Systémové logy** | Kernel Power ID 41, Disk IO ID 153, VBS ID 124, chyby |
+| 08 | **Security log** | Přihlášení, selhání, změny účtů (ID 4624–4732) |
+| 09 | **Drivery** | Podepsané i problematické ovladače |
+| 10 | **Procesy & Služby** | Top 40 procesů dle CPU, všechny Windows služby |
+| 11 | **Síť** | Adaptéry, TCP spojení, porty, firewall, DNS, statistiky |
+| 12 | **Sdílené složky** | SMB sdílení a oprávnění |
+| 13 | **Autostart** | Registry (HKLM/HKCU/RunOnce) + Scheduled Tasks |
+| 14 | **Windows Update** | Historie posledních 30 aktualizací |
+| 15 | **Programy** | Všechny nainstalované aplikace (x64 + x86) |
+| 16 | **Uživatelé & Skupiny** | Lokální účty, skupiny, členové Administrators |
+
+---
+
+## 🎛️ LCARS Dashboard — přehled panelů
+
+### ⏱️ Crash Timer panel (nový v v3.1)
+- Zobrazuje počet hodin od posledního Kernel Power pádu (Event ID 41)
+- Barevná indikace: 🟢 zelená (>72h), 🟡 žlutá (24–72h), 🔴 červená (<24h)
+- Datum posledního pádu + celkový počet zaznamenaných pádů
+
+### 💯 Health Score
+Automaticky vypočítané skóre 0–100 se odečítá za:
+- Přeplněné disky (>80% = -8, >90% = -15)
+- Kernel Power pady (>0 = -6, >5 = -12, >10 = -20)
+- Disk IO chyby ID 153 (>0 = -5, >10 = -10)
+- Problematické drivery (-10)
+- VBS zapnuto (-5)
+- RAM obsazenost >85% (-10)
+- Příliš mnoho systémových chyb (-8)
+
+### 📊 Status Bar
+Permanentní pruh pod hlavičkou zobrazuje live stav:
+```
+WARP: ONLINE | KERNEL PADY: X | DRIVERY: OK/PROBLÉM |
+CPU: model | RAM: X% | DISKY: X KRITICKÉ | VBS: stav |
+C-STATES: stav | BEZ PÁDŮ: Xh
+```
+
+---
+
+## 🎚️ Nastavení limitů záznamů
+
+Skript má na dvou místech nastavitelné limity — kolik záznamů se **načte z logu** a kolik se **zobrazí v HTML reportu**. Obojí lze upravit ručně přímo ve skriptu.
+
+### Kde hledat
+
+Vše je v sekci označené komentářem `[7] SYSTEM LOGY` a `[8] SECURITY LOG`.
+
+### Jak limity fungují
+
+| Parametr | Funkce |
+|----------|--------|
+| `-MaxEvents X` | Kolik záznamů PowerShell **načte z Windows Event Logu** do paměti — větší hodnota = zachytí starší záznamy, ale sken trvá déle |
+| `Select-Object -First X` | Kolik z načtených záznamů se **zobrazí v HTML reportu** |
+
+> 💡 Logika: nejdříve se načte velký buffer (`-MaxEvents`), z něho se vyfiltrují relevantní záznamy, a pak se zobrazí jen první X výsledků (`-First`).
+
+### Přehled všech nastavitelných limitů
+
+```powershell
+# ── [7] SYSTÉMOVÉ LOGY ─────────────────────────────────────────────
+
+# Systémové chyby a varování (úroveň ≤ 2)
+$EventErrors = Get-WinEvent -LogName System -MaxEvents 1000   # ← buffer: kolik načíst
+    | Select-Object -First 50                                  # ← zobrazit: max v reportu
+
+# Kernel Power pady (Event ID 41) — neočekávaný restart
+$KernelPower = Get-WinEvent -LogName System ...
+    | Select-Object -First 15                                  # ← zobrazit v reportu
+
+# Aplikační chyby
+$AppErrors = Get-WinEvent -LogName Application -MaxEvents 500 # ← buffer
+    | Select-Object -First 30                                  # ← zobrazit v reportu
+
+# Disk IO chyby (Event ID 153 — retry operace)
+$DiskIOEvents = Get-WinEvent -LogName System ...
+    | Select-Object -First 15                                  # ← zobrazit v reportu
+
+# VBS události (Event ID 124 — skutečné VBS eventy)
+$VBSEvents = Get-WinEvent -LogName System ...
+    | Select-Object -First 10                                  # ← zobrazit v reportu
+
+# ── [8] SECURITY LOG ───────────────────────────────────────────────
+
+# Bezpečnostní záznamy (přihlášení, selhání, změny účtů)
+$SecEvents = Get-WinEvent -LogName Security -MaxEvents 200    # ← buffer
+    | Select-Object -First 30                                  # ← zobrazit v reportu
+```
+
+### Doporučené hodnoty
+
+| Typ záznamu | Výchozí `-First` | Doporučené maximum | Poznámka |
+|-------------|------------------|--------------------|----------|
+| Systémové chyby | 50 | 100 | Více záznamů = větší HTML soubor |
+| Kernel Power pady | 15 | 50 | Pro dlouhodobé sledování stability |
+| Aplikační chyby | 30 | 60 | — |
+| Disk IO chyby | 15 | 30 | — |
+| VBS události | 10 | 20 | Obvykle jich bývá málo |
+| Security záznamy | 30 | 100 | Pozor na velikost souboru |
+
+> ⚠️ Příliš vysoké hodnoty (`-MaxEvents` přes 5000, `-First` přes 200) mohou prodloužit dobu skenování a výrazně zvětšit výsledný HTML soubor.
+
+---
+
+## 🔧 Changelog
+
+### v3.1 ULTIMATE (aktuální)
+- ✅ **Oprava:** `Get-WmiObject` → `Get-CimInstance` kompletně nahrazeno v celém skriptu
+- ✅ **Oprava:** Event ID 153 správně označen jako **Disk IO retry chyby** (dříve chybně jako VBS)
+- ✅ **Oprava:** Kernel Power alert odstraňuje falešné "VBS podezření"
+- ✅ **Oprava:** Problematické drivery — detekce přes `ConfigManagerErrorCode -ne 0` (přesnější)
+- 🆕 **Nové:** Panel **C-States stav** v sekci BIOS & Security
+- 🆕 **Nové:** Panel **AMD PSP stav** v sekci BIOS & Security  
+- 🆕 **Nové:** **Crash Timer** — výpočet a zobrazení hodin bez Kernel Power pádu
+- 🆕 **Nové:** VBS panel zobrazuje skutečné VBS eventy **ID 124** (ne ID 153)
+- 🆕 **Nové:** Crash Timer karta v hlavním Dashboardu
+- 🆕 **Nové:** C-States a "BEZ PÁDŮ" indikátor přidán do Status Baru
+
+### v3.0
+- Základní 16-modulový sken
+- LCARS HTML výstup se záložkami
+- Health Score systém
+- Kernel Power monitoring
+
+---
+
+## 📁 Struktura exportu
+
+Po spuštění skript vytvoří:
+
+```
+C:\Users\<uživatel>\Desktop\export-slozka-pro-pokrocily-script-poweshale\
+└── StarTrek-Diagnostika-v3-YYYY-MM-DD_HH-mm.html   ← HTML report s datem
+```
+
+Každé spuštění vytvoří **nový soubor** s časovým razítkem — starší reporty zůstávají zachovány.
+
+---
+
+## 💡 Technické poznámky
+
+### Proč `Get-CimInstance` místo `Get-WmiObject`?
+`Get-WmiObject` je deprecated od PowerShell 3.0 a v PS 7+ zcela chybí. `Get-CimInstance` používá WS-Management protokol a je modernějším ekvivalentem s lepší podporou.
+
+### Teploty přes WMI
+WMI teplotní hodnoty (`MSAcpi_ThermalZoneTemperature`) jsou závislé na BIOS a nemusí být dostupné na všech zařízeních. Pro přesné hodnoty doporučuji **HWiNFO64** nebo **HWMonitor**.
+
+### C-States detekce
+Skript čte stav `IDLEDISABLE` z aktivního napájecího plánu přes `powercfg -query`. Hodnota `0x00000001` = C-States vypnuty (doporučeno pro stabilitu NVMe disků a prevenci Kernel Power pádů).
+
+### AMD PSP / TPM
+AMD Platform Security Processor se projevuje jako TPM 2.0 v systému. Pokud je PSP v BIOS vypnuto, `Get-Tpm` vrátí `TpmPresent: False` — skript tuto situaci správně detekuje a zobrazí "VYPNUTO (BIOS)".
+
+### Event ID 41 — Kernel Power
+Jde o neočekávaný restart systému (výpadek napájení, BSOD, přehřátí, chyba hardware). Skript zobrazí posledních 15 zaznamenaných událostí a počítá čas od posledního pádu.
+
+### Bezpečnostní logy
+Sledované Event ID:
+| ID | Popis |
+|----|-------|
+| 4624 | Úspěšné přihlášení |
+| 4625 | Selhání přihlášení |
+| 4634 | Odhlášení |
+| 4648 | Přihlášení s jinými pověřeními |
+| 4720 | Vytvoření účtu |
+| 4726 | Smazání účtu |
+| 4732 | Přidání do skupiny |
+
+---
+
+## 👥 Autoři
+
+| Role | Jméno | Popis |
+|------|-------|-------|
+| 🤖 **Hlavní programování** | **Admirál Claude.AI** | Návrh architektury, psaní kódu, HTML/CSS LCARS šablona, diagnostické moduly, Health Score systém |
+| 🖖 **Správce kódu** | **Více admirál Jiřík** | Vedení projektu, testování na živém systému, zadávání požadavků, opravy, verzování a správa repozitáře |
+
+GitHub správce: [@jirka22med](https://github.com/jirka22med)
+
+> *"Warpový pohon online. Diagnostika zahájena."* 🖖
+
+---
+
+## 📄 Licence
+
+Osobní projekt. Volně ke studiu a použití — pokud někde použiješ, uveď autora. Hvězdná flotila to ocení.
+
+---
+
+*Report generován skriptem StarTrek-Diagnostika-v6-1-ULTIMATE.ps1 | Hvězdná flotila LCARS v3.1*
